@@ -14,12 +14,11 @@ import org.keycloak.models.UserModel;
 import java.nio.charset.StandardCharsets;
 import java.util.StringJoiner;
 
-import static com.keycloak.events.UserSyncEventListenerProviderFactory.QUEUE_NAME;
-
 public class UserSyncEventListenerProvider
         implements EventListenerProvider {
 
 
+    static final String QUEUE_NAME = "kc-signup";
     private static final Logger log = Logger.getLogger(UserSyncEventListenerProvider.class);
     private final KeycloakSession session;
     private final RealmProvider model;
@@ -43,7 +42,7 @@ public class UserSyncEventListenerProvider
             sendUserToQueue(user);
         }
 
-        if(EventType.DELETE_ACCOUNT.equals(event.getType())) {
+        if (EventType.DELETE_ACCOUNT.equals(event.getType())) {
             log.info("User account deleted");
         }
     }
@@ -56,7 +55,7 @@ public class UserSyncEventListenerProvider
 
     private UserModel getUser(Event event) {
         RealmModel realm = this.model.getRealm(event.getRealmId());
-       return  this.session.users().getUserById(realm, event.getUserId());
+        return this.session.users().getUserById(realm, event.getUserId());
     }
 
     private void sendUserToQueue(UserModel user) {
@@ -71,7 +70,7 @@ public class UserSyncEventListenerProvider
                     "firstName": "%s",
                     "lastName": "%s",
                     "enabled": %s,
-                    "emailVerified": %s,
+                    "emailVerified": %s
                 }
                 """.formatted(
                 user.getId(),
@@ -83,6 +82,7 @@ public class UserSyncEventListenerProvider
                 user.isEmailVerified());
 
         try {
+            channel.queueDeclare(QUEUE_NAME, true, false, false, null);
             channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
             log.info("User sync message published to queue: " + message);
         } catch (Exception e) {
@@ -121,33 +121,4 @@ public class UserSyncEventListenerProvider
 
         return joiner.toString();
     }
-
-    private String toString(AdminEvent event) {
-        RealmModel realm = this.model.getRealm(event.getRealmId());
-        UserModel newRegisteredUser = this.session.users().getUserById(realm, event.getAuthDetails().getUserId());
-
-        StringJoiner joiner = new StringJoiner(", ");
-
-        joiner.add("operationType=" + event.getOperationType())
-                .add("realmId=" + event.getAuthDetails().getRealmId())
-                .add("clientId=" + event.getAuthDetails().getClientId())
-                .add("userId=" + event.getAuthDetails().getUserId());
-
-        if (newRegisteredUser != null) {
-            joiner.add("email=" + newRegisteredUser.getEmail())
-                    .add("username=" + newRegisteredUser.getUsername())
-                    .add("firstName=" + newRegisteredUser.getFirstName())
-                    .add("lastName=" + newRegisteredUser.getLastName());
-        }
-
-        joiner.add("ipAddress=" + event.getAuthDetails().getIpAddress())
-                .add("resourcePath=" + event.getResourcePath());
-
-        if (event.getError() != null) {
-            joiner.add("error=" + event.getError());
-        }
-
-        return joiner.toString();
-    }
-
 }

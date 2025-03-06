@@ -16,77 +16,63 @@ import java.util.concurrent.TimeoutException;
 public class UserSyncEventListenerProviderFactory
         implements EventListenerProviderFactory {
 
-  private static final String ID = "external-db-sync-rabbitmq";
-  static final String QUEUE_NAME = "kc-signup";
-  private static final Logger log = Logger.getLogger(UserSyncEventListenerProviderFactory.class);
+    private static final String ID = "external-db-sync-rabbitmq";
+    private static final Logger log = Logger.getLogger(UserSyncEventListenerProviderFactory.class);
 
-  private ConnectionFactory connectionFactory;
-  private Connection connection;
-  private Channel channel;
-
+    private ConnectionFactory connectionFactory;
+    private Connection connection;
+    private Channel channel;
 
 
-  @Override
-  public EventListenerProvider create(KeycloakSession keycloakSession) {
-    checkConnectionAndChannel();
-    declareQueue();
-    return new UserSyncEventListenerProvider(keycloakSession,channel);
-  }
-
-  private synchronized void checkConnectionAndChannel() {
-    try {
-      if (connection == null || !connection.isOpen()) {
-        this.connection = connectionFactory.newConnection();
-      }
-      if (channel == null || !channel.isOpen()) {
-        channel = connection.createChannel();
-      }
+    @Override
+    public EventListenerProvider create(KeycloakSession keycloakSession) {
+        checkConnectionAndChannel();
+        return new UserSyncEventListenerProvider(keycloakSession, channel);
     }
-    catch (IOException | TimeoutException e) {
-      log.error("keycloak-to-rabbitmq ERROR on connection to rabbitmq", e);
-    }
-  }
 
-  private void declareQueue() {
-    try {
-      channel.queueDeclare(QUEUE_NAME, true, false, false, null);
-      log.info("Queue 'kc-signup' declared successfully.");
-    } catch (IOException e) {
-      log.error("Failed to declare queue 'kc-signup'", e);
-    }
+    private synchronized void checkConnectionAndChannel() {
+        try {
+            if (connection == null || !connection.isOpen()) {
+                this.connection = connectionFactory.newConnection();
+            }
+            if (channel == null || !channel.isOpen()) {
+                channel = connection.createChannel();
+            }
+        } catch (IOException | TimeoutException e) {
+            log.error("keycloak-to-rabbitmq ERROR on connection to rabbitmq", e);
+        }
     }
 
 
     @Override
-  public void init(Config.Scope scope) {
+    public void init(Config.Scope scope) {
 
-    this.connectionFactory = new ConnectionFactory();
-    connectionFactory.setHost("rabbitmq"); // docker-compose service name
-    connectionFactory.setPort(5672);
-    connectionFactory.setUsername("admin");
-    connectionFactory.setPassword("admin");
-    connectionFactory.setAutomaticRecoveryEnabled(true);
-    log.info("Rabbitmq connection established. on port 5672 ");
-  }
-
-  @Override
-  public void postInit(KeycloakSessionFactory keycloakSessionFactory) {
-
-  }
-
-  @Override
-  public void close() {
-    try {
-      channel.close();
-      connection.close();
+        this.connectionFactory = new ConnectionFactory();
+        connectionFactory.setHost("rabbitmq"); // docker-compose service name
+        connectionFactory.setPort(5672);
+        connectionFactory.setUsername("admin");
+        connectionFactory.setPassword("admin");
+        connectionFactory.setAutomaticRecoveryEnabled(true);
+        log.info("Rabbitmq connection established. on port 5672 ");
     }
-    catch (IOException | TimeoutException e) {
-      log.error("keycloak-to-rabbitmq ERROR on close", e);
-    }
-  }
 
-  @Override
-  public String getId() {
-    return ID;
-  }
+    @Override
+    public void postInit(KeycloakSessionFactory keycloakSessionFactory) {
+
+    }
+
+    @Override
+    public void close() {
+        try {
+            channel.close();
+            connection.close();
+        } catch (IOException | TimeoutException e) {
+            log.error("keycloak-to-rabbitmq ERROR on close", e);
+        }
+    }
+
+    @Override
+    public String getId() {
+        return ID;
+    }
 }

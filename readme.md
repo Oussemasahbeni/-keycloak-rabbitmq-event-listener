@@ -3,6 +3,11 @@
 This project demonstrates a custom Keycloak event listener that sends user data to a RabbitMQ queue. A Spring Boot
 application consumes the messages from the queue and persists the user data to a database.
 
+In a traditional setup, you could directly send a REST request from Keycloak to the backend service. However, if the
+backend is temporarily unavailable, the request will be lost forever. By using RabbitMQ as a message broker,
+the events are safely queued until the backend service is back online, ensuring no data loss and providing better
+reliability for user-related events.
+
 ## Technologies Used
 
 - Java
