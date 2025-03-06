@@ -9,6 +9,10 @@ services:
       POSTGRES_DB: kc_event_test
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+
+    ports:
+      - "5432:5432"
     networks:
       - keycloak_network
   keycloak:
@@ -21,7 +25,6 @@ services:
       - ./providers:/opt/keycloak/providers
     ports:
       - "8085:8080"
-      -
     command:
       - start-dev
     networks:
@@ -36,7 +39,7 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: admin
     networks:
-        - keycloak_network
+      - keycloak_network
 
 # Persistent volumes configuration
 volumes:

@@ -14,12 +14,13 @@ import org.keycloak.models.UserModel;
 import java.nio.charset.StandardCharsets;
 import java.util.StringJoiner;
 
+import static com.keycloak.events.UserSyncEventListenerProviderFactory.QUEUE_NAME;
+
 public class UserSyncEventListenerProvider
         implements EventListenerProvider {
 
 
     private static final Logger log = Logger.getLogger(UserSyncEventListenerProvider.class);
-    private static final String QUEUE_NAME = "kc-signup";
     private final KeycloakSession session;
     private final RealmProvider model;
     private final Channel channel;
@@ -71,7 +72,6 @@ public class UserSyncEventListenerProvider
                     "lastName": "%s",
                     "enabled": %s,
                     "emailVerified": %s,
-                    "action": "%s"
                 }
                 """.formatted(
                 user.getId(),
@@ -80,11 +80,9 @@ public class UserSyncEventListenerProvider
                 user.getFirstName(),
                 user.getLastName(),
                 user.isEnabled(),
-                user.isEmailVerified(),
-                Actions.REGISTER);
+                user.isEmailVerified());
 
         try {
-            channel.queueDeclare(QUEUE_NAME, true, false, false, null);
             channel.basicPublish("", QUEUE_NAME, null, message.getBytes(StandardCharsets.UTF_8));
             log.info("User sync message published to queue: " + message);
         } catch (Exception e) {

@@ -1,0 +1,1 @@
+CREATE DATABASE "kc-event-test";

@@ -17,6 +17,7 @@ public class UserSyncEventListenerProviderFactory
         implements EventListenerProviderFactory {
 
   private static final String ID = "external-db-sync-rabbitmq";
+  static final String QUEUE_NAME = "kc-signup";
   private static final Logger log = Logger.getLogger(UserSyncEventListenerProviderFactory.class);
 
   private ConnectionFactory connectionFactory;
@@ -28,6 +29,7 @@ public class UserSyncEventListenerProviderFactory
   @Override
   public EventListenerProvider create(KeycloakSession keycloakSession) {
     checkConnectionAndChannel();
+    declareQueue();
     return new UserSyncEventListenerProvider(keycloakSession,channel);
   }
 
@@ -45,7 +47,17 @@ public class UserSyncEventListenerProviderFactory
     }
   }
 
-  @Override
+  private void declareQueue() {
+    try {
+      channel.queueDeclare(QUEUE_NAME, true, false, false, null);
+      log.info("Queue 'kc-signup' declared successfully.");
+    } catch (IOException e) {
+      log.error("Failed to declare queue 'kc-signup'", e);
+    }
+    }
+
+
+    @Override
   public void init(Config.Scope scope) {
 
     this.connectionFactory = new ConnectionFactory();
@@ -54,6 +66,7 @@ public class UserSyncEventListenerProviderFactory
     connectionFactory.setUsername("admin");
     connectionFactory.setPassword("admin");
     connectionFactory.setAutomaticRecoveryEnabled(true);
+    log.info("Rabbitmq connection established. on port 5672 ");
   }
 
   @Override
